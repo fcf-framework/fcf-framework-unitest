@@ -1,0 +1,5 @@
+{
+  skip: [
+    "^NDetails/BackServer.js"
+  ]
+}

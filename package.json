@@ -1,0 +1,27 @@
+{
+  "name": "fcf-framework-unitest",
+  "version": "1.0.1",
+  "description": "Module for automatic testing both on the server side and on the browser side",
+  "main": "unitest.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "hg+https://hg.osdn.net/view/fcf2/fcf-framework-unitest"
+  },
+  "homepage": "https://fcf-framework.tech/packages/fcf-framework-unitest",
+  "keywords": [
+    "fcf-framework-unitest",
+    "unit test",
+    "unittest",
+    "unitest",
+    "test"
+  ],
+  "dependencies": {
+    "express": "^4.0.0",
+    "fcf-framework-core": "^2.0.6"
+  },
+  "author": "Vladimir Markin",
+  "license": "MIT"
+}
