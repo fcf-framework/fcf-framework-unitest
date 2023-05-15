@@ -10,6 +10,7 @@
     "type": "git",
     "url": "https://github.com/fcf-framework/fcf-framework-unitest.git"
   },
+  "homepage": "https://fcf-framework.tech/packages/fcf-framework-unitest",
   "keywords": [
     "fcf-framework",
     "unit test",
