@@ -1,6 +1,6 @@
 {
   "name": "fcf-framework-unitest",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Module for automatic testing both on the server side and on the browser side",
   "main": "unitest.js",
   "scripts": {
