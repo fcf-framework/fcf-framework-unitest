@@ -198,27 +198,43 @@ fcf.module({
         let c = fcf.compare(a_left, a_right, a_strict);
         if (a_operation == "!=") {
           if (c == 0) {
-            throw new fcf.Exception("UNITEST_NOT_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            this._task.currentTestInfo.error = new fcf.Exception("UNITEST_NOT_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            throw this._task.currentTestInfo.error;
           }
         } else if (a_operation == "=" || a_operation == "==") {
           if (c != 0) {
-            throw new fcf.Exception("UNITEST_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            if (this._task && this._task.currentTestInfo)
+              this._task.currentTestInfo.error = error
+            throw error;
           }
         } else if (a_operation == "<") {
           if (c >= 0) {
-            throw new fcf.Exception("UNITEST_LESS", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_LESS", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            if (this._task && this._task.currentTestInfo)
+              this._task.currentTestInfo.error = error
+            throw error;
           }
         } else if (a_operation == "<=") {
           if (c > 0) {
-            throw new fcf.Exception("UNITEST_LESS_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_LESS_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            if (this._task && this._task.currentTestInfo)
+              this._task.currentTestInfo.error = error
+            throw error;
           }
         } else if (a_operation == ">") {
           if (c <= 0) {
-            throw new fcf.Exception("UNITEST_GREATER", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_GREATER", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            if (this._task && this._task.currentTestInfo)
+              this._task.currentTestInfo.error = error
+            throw error;
           }
         } else if (a_operation == ">=") {
           if (c < 0) {
-            throw new fcf.Exception("UNITEST_GREATER_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_GREATER_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            if (this._task && this._task.currentTestInfo)
+              this._task.currentTestInfo.error = error
+            throw error;
           }
         }
       }
@@ -230,7 +246,10 @@ fcf.module({
       ///        Called on the fcf.NUnitest.unitest object passed through the fcf.test() test callback argument
       /// @param Error|string a_error - Error information
       error(a_error) {
-        throw new fcf.Exception("UNITEST_ERROR", {error: a_error instanceof Error ? "Test execution error" : fcf.str(a_error)}, a_error instanceof Error ? a_error : undefined);
+        let error = new fcf.Exception("UNITEST_ERROR", {error: a_error instanceof Error ? "Test execution error" : fcf.str(a_error)}, a_error instanceof Error ? a_error : undefined);
+        if (this._task && this._task.currentTestInfo)
+          this._task.currentTestInfo.error = error;
+        throw error;
       }
 
 
@@ -389,7 +408,7 @@ fcf.module({
                         webTestingPages:   []
                       },
                       a_options);
-        let task = {
+        this._task = {
           options:        a_options,
           result:  {
             errorCount:       0,
@@ -450,9 +469,9 @@ fcf.module({
           }
         };
 
-        task.outputActions
+        this._task.outputActions
         .catch((a_error)=>{
-          this._err(task, a_error);
+          this._err(a_error);
         });
 
         let processes = [];
@@ -462,7 +481,7 @@ fcf.module({
         let testsNames;
         return fcf.actions()
         .then(async ()=>{
-          let include = task.options.include;
+          let include = this._task.options.include;
           if (include && typeof include == "string"){
             include = [include];
           }
@@ -470,9 +489,9 @@ fcf.module({
             await fcf.require(include);
           }
 
-          partsNames  = this._quantityToOptionArray(task.options.parts);
-          groupsNames  = this._quantityToOptionArray(task.options.groups);
-          testsNames  = this._quantityToOptionArray(task.options.tests);
+          partsNames  = this._quantityToOptionArray(this._task.options.parts);
+          groupsNames  = this._quantityToOptionArray(this._task.options.groups);
+          testsNames  = this._quantityToOptionArray(this._task.options.tests);
         })
         .then(()=>{
           if (typeof a_wait == "string") {
@@ -488,10 +507,10 @@ fcf.module({
           }
         })
         .then(async ()=>{
-          await this._startTests(task);
-          await this._logTestsStart(task, partsNames, groupsNames, testsNames);
+          await this._startTests();
+          await this._logTestsStart(partsNames, groupsNames, testsNames);
         })
-        .each(task.options.processes, (a_key, a_processInfo, a_res, a_act)=>{
+        .each(this._task.options.processes, (a_key, a_processInfo, a_res, a_act)=>{
           if (!this._isSelected(a_processInfo.tests, testsNames)){
             a_act.complete();
             return;
@@ -512,13 +531,13 @@ fcf.module({
           let process = libChildProcess.spawn(commandInfo.command, commandInfo.args);
           processes.push(process);
 
-          this._log(task, `Child process "${a_processInfo.command}" started with pid ${process.pid}`);
+          this._log(`Child process "${a_processInfo.command}" started with pid ${process.pid}`);
           process.stdout.on("data", (a_data) => {
-            this._log(task, `Sub process "${commandInfo.command}" stdout:`, fcf.Logger.offset(4, ` [${commandInfo.command} PID: ${process.pid}]> `), "\n" , a_data.toString());
+            this._log(`Sub process "${commandInfo.command}" stdout:`, fcf.Logger.offset(4, ` [${commandInfo.command} PID: ${process.pid}]> `), "\n" , a_data.toString());
           });
 
           process.stderr.on("data", (a_data) => {
-            this._err(task, `Sub process "${commandInfo.command}" stderr:`, fcf.Logger.offset(4, ` [PID: ${process.pid}]> `), "\n" , a_data.toString());
+            this._err(`Sub process "${commandInfo.command}" stderr:`, fcf.Logger.offset(4, ` [PID: ${process.pid}]> `), "\n" , a_data.toString());
           });
 
           process.on("error", (a_error) => {
@@ -542,23 +561,23 @@ fcf.module({
           }, a_processInfo.startTimeout || 1000);
         })
         .then(()=>{
-          if (task.options.enableLocalTests)
-            return this._runLocalTests(task, partsNames, groupsNames, testsNames);
+          if (this._task.options.enableLocalTests)
+            return this._runLocalTests(partsNames, groupsNames, testsNames);
         })
         .then(()=>{
-          if (task.options.enableWebTests && !fcf.empty(task.options.webTestingPages))
-            return this._runWebTests(task, partsNames, groupsNames, testsNames);
+          if (this._task.options.enableWebTests && !fcf.empty(this._task.options.webTestingPages))
+            return this._runWebTests(partsNames, groupsNames, testsNames);
         })
         .then(()=>{
-          return this._logTestsEnd(task);
+          return this._logTestsEnd();
         })
         .finally(()=> {
           return fcf.actions()
           .then((a_res, a_act)=>{
-            task.outputActions.finally(()=>{ a_act.complete(); });
+            this._task.outputActions.finally(()=>{ a_act.complete(); });
           })
           .then(()=>{
-            return this._endTests(task);
+            return this._endTests();
           })
         })
         .finally(()=>{
@@ -570,13 +589,13 @@ fcf.module({
           }
         })
         .then(()=>{
-          return task.result;
+          return this._task.result;
         });
       }
 
 
 
-      async _runLocalTests(a_task, a_partsNames, a_groupsNames, a_testsNames){
+      async _runLocalTests(a_partsNames, a_groupsNames, a_testsNames){
         let tests = [];
         for(let part in this._tests) {
           if (a_partsNames && a_partsNames.indexOf(part) == -1)
@@ -598,16 +617,16 @@ fcf.module({
         }
 
         if (tests.length) {
-          this._log(a_task, "");
-          this._log(a_task, "Start local tests...");
-          this._log(a_task, "--------------------");
+          this._log("");
+          this._log("Start local tests...");
+          this._log("--------------------");
         }
 
         for(let test of tests) {
-          a_task.currentPart = test.part;
-          a_task.currentGroup = test.group;
-          a_task.currentTest = test.name;
-          a_task.currentTestInfo = {
+          this._task.currentPart = test.part;
+          this._task.currentGroup = test.group;
+          this._task.currentTest = test.name;
+          this._task.currentTestInfo = {
             part:      test.part,
             group:     test.group,
             test:      test.name,
@@ -616,53 +635,53 @@ fcf.module({
             error:     undefined,
             output:    [],
           };
-          this._logEx(a_task,
-                      {command: "start_test"  },
-                      `Test [${a_task.currentPart}][${a_task.currentGroup}][${a_task.currentTest}] running ...`);
+          this._logEx({command: "start_test"  },
+                      `Test [${this._task.currentPart}][${this._task.currentGroup}][${this._task.currentTest}] running ...`);
           let timer;
           try {
             await fcf.actions()
             .then(async (a_res, a_act)=>{
               timer = setTimeout(() => {
                 a_act.error(new fcf.Exception("UNITEST_TIMEOUT"));
-              }, a_task.options.timeout);
+              }, this._task.options.timeout);
               await test.test(this);
               a_act.complete();
             });
-            a_task.currentTestInfo.status = "ok";
-            this._logEx(a_task,
-                        {command: "end_test", error: undefined  } ,
-                        `Test [${a_task.currentPart}][${a_task.currentGroup}][${a_task.currentTest}] is completed.`);
+            if (this._task.currentTestInfo.error) {
+              throw this._task.currentTestInfo.error;
+            }
+            this._task.currentTestInfo.status = "ok";
+            this._logEx({command: "end_test", error: undefined  } ,
+                        `Test [${this._task.currentPart}][${this._task.currentGroup}][${this._task.currentTest}] is completed.`);
           } catch(e) {
-            a_task.currentTestInfo.status = "error";
-            a_task.currentTestInfo.error = this._getErrorInfo(e);
+            this._task.currentTestInfo.status = "error";
+            this._task.currentTestInfo.error = this._getErrorInfo(e);
             this._errEx(
-                      a_task,
                       {command: "end_test", error: e  },
-                      `Test [${a_task.currentPart}][${a_task.currentGroup}][${a_task.currentTest}] is failed. \n`+
-                      `Position: ${a_task.currentTestInfo.error.file}:${a_task.currentTestInfo.error.line}\n` +
-                      `Error:   `, fcf.str(a_task.currentTestInfo.error.error, true));
+                      `Test [${this._task.currentPart}][${this._task.currentGroup}][${this._task.currentTest}] is failed. \n`+
+                      `Position: ${this._task.currentTestInfo.error.file}:${this._task.currentTestInfo.error.line}\n` +
+                      `Error:   `, fcf.str(this._task.currentTestInfo.error.error, true));
           }
           clearTimeout(timer);
-          a_task.result.tests.push(a_task.currentTestInfo);
-          if (a_task.currentTestInfo.status == "error") {
-            ++a_task.result.errorCount;
+          this._task.result.tests.push(this._task.currentTestInfo);
+          if (this._task.currentTestInfo.status == "error") {
+            ++this._task.result.errorCount;
           } else {
-            ++a_task.result.successfulCount;
+            ++this._task.result.successfulCount;
           }
-          ++a_task.result.testCount;
-          a_task.currentTestInfo = undefined;
+          ++this._task.result.testCount;
+          this._task.currentTestInfo = undefined;
         }
-        a_task.currentPart = undefined;
-        a_task.currentGroup = undefined;
-        a_task.currentTest = undefined;
-        a_task.currentTestInfo = undefined;
+        this._task.currentPart = undefined;
+        this._task.currentGroup = undefined;
+        this._task.currentTest = undefined;
+        this._task.currentTestInfo = undefined;
       }
 
 
 
-      async _runWebTests(a_task, a_partsNames, a_groupsNames, a_testsNames){
-        if (fcf.empty(a_task.options.webTestingPages) || !fcf.isServer())
+      async _runWebTests(a_partsNames, a_groupsNames, a_testsNames){
+        if (fcf.empty(this._task.options.webTestingPages) || !fcf.isServer())
           return;
 
         let libChildProcess = require("child_process");
@@ -672,12 +691,12 @@ fcf.module({
         let processes = [];
         return fcf.actions()
         .then(()=>{
-          this._log(a_task, "");
-          this._log(a_task, "Start web tests...");
-          this._log(a_task, "--------------------");
+          this._log("");
+          this._log("Start web tests...");
+          this._log("--------------------");
         })
         // running sub processes
-        .each(a_task.options.webProcesses, async (k, cmdInfo, a_res, a_act)=>{
+        .each(this._task.options.webProcesses, async (k, cmdInfo, a_res, a_act)=>{
           if (!this._isSelected(cmdInfo.tests, a_testsNames)){
             a_act.complete();
             return;
@@ -709,18 +728,18 @@ fcf.module({
             cmdProc  = info.command;
             cmdArgs  = info.args;
           }
-          this._log(a_task, `Start process: ${cmdStr}`);
+          this._log(`Start process: ${cmdStr}`);
 
           process = libChildProcess.spawn(cmdProc, cmdArgs);
           processes.push(process);
-          this._log(a_task, `Child process "${cmdProc}" started with pid ${process.pid}`);
+          this._log(`Child process "${cmdProc}" started with pid ${process.pid}`);
 
           process.stdout.on("data", (a_data) => {
-            this._log(a_task, `Sub process "${cmdProc}" stdout:`, fcf.Logger.offset(4, ` [${cmdProc} PID: ${process.pid}]> `), "\n" , a_data.toString());
+            this._log(`Sub process "${cmdProc}" stdout:`, fcf.Logger.offset(4, ` [${cmdProc} PID: ${process.pid}]> `), "\n" , a_data.toString());
           });
 
           process.stderr.on("data", (a_data) => {
-            this._err(a_task, `Sub process "${cmdProc}" stderr:`, fcf.Logger.offset(4, ` [PID: ${process.pid}]> `), "\n" , a_data.toString());
+            this._err(`Sub process "${cmdProc}" stderr:`, fcf.Logger.offset(4, ` [PID: ${process.pid}]> `), "\n" , a_data.toString());
           });
 
           process.on("error", (a_error) => {
@@ -741,12 +760,12 @@ fcf.module({
         })
 
         .then(()=>{
-          this._log(a_task, `Start back server on port ${a_task.options.webTestingPort}`);
-          backServer = new BackServer(a_task.options.webTestingPort, a_task.options.webTestingPages);
+          this._log(`Start back server on port ${this._task.options.webTestingPort}`);
+          backServer = new BackServer(this._task.options.webTestingPort, this._task.options.webTestingPages);
           return backServer.run();
         })
         // running tests
-        .each(a_task.options.webBrowsers, async (a_key, a_browsers)=>{
+        .each(this._task.options.webBrowsers, async (a_key, a_browsers)=>{
           a_browsers = Array.isArray(a_browsers) ? a_browsers : [a_browsers];
           let lastError;
           let lastCommand;
@@ -763,40 +782,39 @@ fcf.module({
                 if (lastCommand.indexOf("{{") == -1){
                   lastCommand += " \"@{{url}}@\"";
                 }
-                let include = Array.isArray(a_task.options.webTestingPages[0].include)     ? a_task.options.webTestingPages[0].include :
-                              typeof a_task.options.webTestingPages[0].include == "string" ? [a_task.options.webTestingPages[0].include] :
+                let include = Array.isArray(this._task.options.webTestingPages[0].include)     ? this._task.options.webTestingPages[0].include :
+                              typeof this._task.options.webTestingPages[0].include == "string" ? [this._task.options.webTestingPages[0].include] :
                                                                                              [];
-                let url     = a_task.options.webTestingPages[0].url;
+                let url     = this._task.options.webTestingPages[0].url;
                 url         += url.indexOf("?") == -1 ? "?" : "&";
                 url         += `___fcf_unitest&___fcf_unitest_host=localhost&`+
-                               `___fcf_unitest_port=${a_task.options.webTestingPort}&`+
-                               `___fcf_unitest_tests=${encodeURIComponent(JSON.stringify(a_task.options.tests))}&`+
-                               `___fcf_unitest_groups=${encodeURIComponent(JSON.stringify(a_task.options.groups))}&`+
-                               `___fcf_unitest_parts=${encodeURIComponent(JSON.stringify(a_task.options.parts))}&`+
+                               `___fcf_unitest_port=${this._task.options.webTestingPort}&`+
+                               `___fcf_unitest_tests=${encodeURIComponent(JSON.stringify(this._task.options.tests))}&`+
+                               `___fcf_unitest_groups=${encodeURIComponent(JSON.stringify(this._task.options.groups))}&`+
+                               `___fcf_unitest_parts=${encodeURIComponent(JSON.stringify(this._task.options.parts))}&`+
                                `___fcf_unitest_id=${browserTestId}&`+
-                               (a_task.options.webTestingPages[0].wait ? `___fcf_unitest_wait=${a_task.options.webTestingPages[0].wait}&`: "") +
+                               (this._task.options.webTestingPages[0].wait ? `___fcf_unitest_wait=${this._task.options.webTestingPages[0].wait}&`: "") +
                                `___fcf_unitest_include=${encodeURIComponent(JSON.stringify(include))}`;
                 lastCommand = fcf.tokenize(lastCommand, {url: url}, {quiet: true});
                 let commandInfo = libFCFProcess.commandFromString(lastCommand);
 
                 backServer.setId(browserTestId);
                 backServer.onStep((a_stepIndex) => {
-                  if (Array.isArray(a_task.options.webTestingPages) &&
-                      a_task.options.webTestingPages[a_stepIndex] &&
-                      a_task.options.webTestingPages[a_stepIndex].url) {
-                    let step = a_task.options.webTestingPages[a_stepIndex];
-                    let route = new fcf.RouteInfo(a_task.options.webTestingPages[a_stepIndex].url, "root");
+                  if (Array.isArray(this._task.options.webTestingPages) &&
+                      this._task.options.webTestingPages[a_stepIndex] &&
+                      this._task.options.webTestingPages[a_stepIndex].url) {
+                    let step = this._task.options.webTestingPages[a_stepIndex];
+                    let route = new fcf.RouteInfo(this._task.options.webTestingPages[a_stepIndex].url, "root");
                     route.urlArgs.___fcf_unitest = undefined;
                     route.urlArgs.___fcf_unitest_host = "localhost";
-                    route.urlArgs.___fcf_unitest_port = a_task.options.webTestingPort;
+                    route.urlArgs.___fcf_unitest_port = this._task.options.webTestingPort;
                     route.urlArgs.___fcf_unitest_include = Array.isArray(step.include) ? step.include : [];
                     route.urlArgs.___fcf_unitest_step = a_stepIndex;
                     route.urlArgs.___fcf_unitest_id = browserTestId;
-                    route.urlArgs.___fcf_unitest_wait = a_task.options.webTestingPages[a_stepIndex].wait;
+                    route.urlArgs.___fcf_unitest_wait = this._task.options.webTestingPages[a_stepIndex].wait;
 
                     let url = fcf.buildUrl(route);
                     this._msg(
-                      a_task,
                       commandInfo.command,
                       {
                         unitest:    this,
@@ -827,8 +845,8 @@ fcf.module({
                     timer = setTimeout(()=>{
                       complete = true;
                       a_act.error(new Error(`[${a_message.part}][${a_message.group}][${a_message.test}] test timed out`));
-                    }, a_task.options.timeout);
-                    a_task.currentTestInfo = {
+                    }, this._task.options.timeout);
+                    this._task.currentTestInfo = {
                       part:      a_message.part,
                       group:     a_message.group,
                       test:      a_message.test,
@@ -837,38 +855,38 @@ fcf.module({
                       error:     undefined,
                       output:    [],
                     };
-                  } else if (a_message.command == "end_test" && a_task.currentTestInfo) {
+                  } else if (a_message.command == "end_test" && this._task.currentTestInfo) {
                     clearTimeout(timer);
                     timer = setTimeout(()=>{
                       complete = true;
                       a_act.error(new Error("Browser command timed out"));
-                    }, a_task.options.timeout);
-                    a_task.currentTestInfo.status = a_message.error ? "error" : "ok";
-                    a_task.currentTestInfo.error  = a_message.error;
-                    a_task.result.tests.push(a_task.currentTestInfo);
-                    if (a_task.currentTestInfo.status == "error") {
-                      ++a_task.result.errorCount;
+                    }, this._task.options.timeout);
+                    this._task.currentTestInfo.status = a_message.error ? "error" : "ok";
+                    this._task.currentTestInfo.error  = a_message.error;
+                    this._task.result.tests.push(this._task.currentTestInfo);
+                    if (this._task.currentTestInfo.status == "error") {
+                      ++this._task.result.errorCount;
                     } else {
-                      ++a_task.result.successfulCount;
+                      ++this._task.result.successfulCount;
                     }
-                    ++a_task.result.testCount;
-                    a_task.currentTestInfo = undefined;
+                    ++this._task.result.testCount;
+                    this._task.currentTestInfo = undefined;
                   }
-                  this._msg(a_task, commandInfo.command, a_message);
+                  this._msg(commandInfo.command, a_message);
                 });
 
-                this._log(a_task, `Start browser '${lastCommand}' ...`);
+                this._log(`Start browser '${lastCommand}' ...`);
                 process = libChildProcess.spawn(commandInfo.command, commandInfo.args);
                 process.on("error", (a_error)=>{
                   clearTimeout(timer);
-                  this._err(a_task, `Failed start browser 2'${lastCommand}'`);
+                  this._err(`Failed start browser 2'${lastCommand}'`);
                   a_act.error(new Error(`browser '${lastCommand}' exited with an error.`));
                 });
                 clearTimeout(timer);
                 timer = setTimeout(()=>{
                   complete = true;
                   a_act.error(new Error(`Page "${url}" test timed out`));
-                }, a_task.options.timeout);
+                }, this._task.options.timeout);
               })
               .finally(()=>{
                 if (process){
@@ -905,149 +923,143 @@ fcf.module({
 
 
 
-      async _startTests(a_task) {
-        let self = this;
+      async _startTests() {
+        var self = this;
 
-        a_task.originLog = console.log;
+        this._task.originLog = console.log;
         console.log = function(){
-          if (!a_task.selfOutput){
-            a_task.pushOutput("server", "log", "", {}, arguments);
+          if (!self._task.selfOutput){
+            self._task.pushOutput("server", "log", "", {}, arguments);
           }
-          a_task.originLog.apply(console, arguments);
+          self._task.originLog.apply(console, arguments);
         };
-        a_task.originWarn = console.warn;
+        this._task.originWarn = console.warn;
         console.warn = function(){
-          if (!a_task.selfOutput){
-            a_task.pushOutput("server", "warning", "", {}, arguments);
+          if (!self._task.selfOutput){
+            self._task.pushOutput("server", "warning", "", {}, arguments);
           }
-          a_task.originWarn.apply(console, arguments);
+          self._task.originWarn.apply(console, arguments);
         };
-        a_task.originError = console.error;
+        this._task.originError = console.error;
         console.error = function(){
-          if (!a_task.selfOutput){
-            a_task.pushOutput("server", "error", "", {}, arguments);
+          if (!self._task.selfOutput){
+            self._task.pushOutput("server", "error", "", {}, arguments);
           }
-          a_task.originError.apply(console, arguments);
+          self._task.originError.apply(console, arguments);
         };
 
-        a_task.logEventHandlerBefore = function(a_info){
-          if (!a_task.selfOutput){
-            a_task.selfLoggerOutput = true;
-            a_task.selfOutput = true;
+        this._task.logEventHandlerBefore = function(a_info){
+          if (!self._task.selfOutput){
+            self._task.selfLoggerOutput = true;
+            self._task.selfOutput = true;
           }
         };
-        fcf.log.on("message_before", a_task.logEventHandlerBefore);
+        fcf.log.on("message_before", this._task.logEventHandlerBefore);
 
 
-        a_task.logEventHandlerAfter = function(a_info){
-          if (!a_task.selfOutput || a_task.selfLoggerOutput){
-            a_task.pushOutput("server", a_info.level, a_info.module, {}, a_info.args);
+        this._task.logEventHandlerAfter = function(a_info){
+          if (!self._task.selfOutput || self._task.selfLoggerOutput){
+            self._task.pushOutput("server", a_info.level, a_info.module, {}, a_info.args);
           }
-          if (a_task.selfOutput && a_task.selfLoggerOutput){
-            a_task.selfLoggerOutput = false;
-            a_task.selfOutput = false;
+          if (self._task.selfOutput && self._task.selfLoggerOutput){
+            self._task.selfLoggerOutput = false;
+            self._task.selfOutput = false;
           }
         };
-        fcf.log.on("message_after", a_task.logEventHandlerAfter);
+        fcf.log.on("message_after", this._task.logEventHandlerAfter);
       }
 
 
 
-      _endTests(a_task) {
-        if (a_task.originLog)
-          console.log = a_task.originLog;
-        if (a_task.originWarn)
-          console.warn = a_task.originWarn;
-        if (a_task.originError)
-          console.error = a_task.originError;
-        fcf.log.detach(a_task.logEventHandlerBefore);
-        fcf.log.detach(a_task.logEventHandlerAfter);
+      _endTests() {
+        if (this._task.originLog)
+          console.log = this._task.originLog;
+        if (this._task.originWarn)
+          console.warn = this._task.originWarn;
+        if (this._task.originError)
+          console.error = this._task.originError;
+        fcf.log.detach(this._task.logEventHandlerBefore);
+        fcf.log.detach(this._task.logEventHandlerAfter);
       }
 
 
 
-      _logTestsStart(a_task, a_parts, a_groups, a_tests) {
-        this._log(a_task, "====================================================")
-        this._log(a_task, `Start testing${fcf.isServer() ? " on the server side..." : ""}`)
-        this._log(a_task, `Parts:  ${a_parts ? a_parts.join("; ") : "*"}`);
-        this._log(a_task, `Groups: ${a_groups ? a_groups.join("; ") : "*"}`);
-        this._log(a_task, `Tests:  ${a_tests ? a_tests.join("; ") : "*"}`);
+      _logTestsStart(a_parts, a_groups, a_tests) {
+        this._log("====================================================")
+        this._log(`Start testing${fcf.isServer() ? " on the server side..." : ""}`)
+        this._log(`Parts:  ${a_parts ? a_parts.join("; ") : "*"}`);
+        this._log(`Groups: ${a_groups ? a_groups.join("; ") : "*"}`);
+        this._log(`Tests:  ${a_tests ? a_tests.join("; ") : "*"}`);
       }
 
 
 
-      _logTestsEnd(a_task) {
-        let errorTests = a_task.result.tests
+      _logTestsEnd() {
+        let errorTests = this._task.result.tests
                          .filter((test)=>{ return !!test.error })
                          .map((test)=>{ return `Executor ${test.executor}:  [${test.part}][${test.group}][${test.test}]`; })
                          .join(";\n");
-        this._log(a_task, "");
-        this._log(a_task, "----------------------------------------------------");
-        this._log(a_task, `${a_task.result.testCount} test${a_task.result.testCount > 1 ? "s" : ""} have been completed.`);
-        this._log(a_task, `Errors: ${a_task.result.errorCount}; Successfully: ${a_task.result.successfulCount}; Total: ${a_task.result.testCount}`);
+        this._log("");
+        this._log("----------------------------------------------------");
+        this._log(`${this._task.result.testCount} test${this._task.result.testCount > 1 ? "s" : ""} have been completed.`);
+        this._log(`Errors: ${this._task.result.errorCount}; Successfully: ${this._task.result.successfulCount}; Total: ${this._task.result.testCount}`);
         if (errorTests)
-          this._log(a_task, `Tests that failed: \n${errorTests}`);
+          this._log(`Tests that failed: \n${errorTests}`);
       }
 
 
 
-      _msg(a_task, a_browser, a_message) {
-        a_task.selfOutput = true;
-        a_task.pushOutput(a_browser, a_message.level, a_message.source, {}, [a_message.message]);
-        if (!a_task.options.quiet) {
+      _msg(a_browser, a_message) {
+        this._task.selfOutput = true;
+        this._task.pushOutput(a_browser, a_message.level, a_message.source, {}, [a_message.message]);
+        if (!this._task.options.quiet) {
           fcf.log.log.apply(fcf.log, fcf.append([`${a_message.source}; BROWSER:${a_browser}`], [a_message.message]));
         }
-        a_task.selfOutput = false;
+        this._task.selfOutput = false;
       }
 
 
 
-      _log(a_task) {
-        let args = fcf.append([], arguments);
-        args.shift();
-        a_task.selfOutput = true;
-        a_task.pushOutput("server", "log", "UniTest", {}, args);
-        if (!a_task.options.quiet)
-          fcf.log.log.apply(fcf.log, fcf.append(["UniTest"], args));
-        a_task.selfOutput = false;
+      _log() {
+        this._task.selfOutput = true;
+        this._task.pushOutput("server", "log", "UniTest", {}, arguments);
+        if (!this._task.options.quiet)
+          fcf.log.log.apply(fcf.log, fcf.append(["UniTest"], arguments));
+        this._task.selfOutput = false;
       }
 
 
 
-      _logEx(a_task) {
+      _logEx() {
         let args   = fcf.append([], arguments);
-        args.shift();
         let exdata = args.shift();
-        a_task.selfOutput = true;
-        a_task.pushOutput("server", "log", "UniTest", exdata, args);
-        if (!a_task.options.quiet)
+        this._task.selfOutput = true;
+        this._task.pushOutput("server", "log", "UniTest", exdata, args);
+        if (!this._task.options.quiet)
           fcf.log.log.apply(fcf.log, fcf.append(["UniTest"], args));
-        a_task.selfOutput = false;
+        this._task.selfOutput = false;
       }
 
 
 
-      _err(a_task) {
-        let args   = fcf.append([], arguments);
-        args.shift();
-        a_task.selfOutput = true;
-        a_task.pushOutput("server", "error", "UniTest", {}, args);
-        if (!a_task.options.quiet)
-          fcf.log.err.apply(fcf.log, fcf.append(["UniTest"], args));
-        a_task.selfOutput = false;
+      _err() {
+        this._task.selfOutput = true;
+        this._task.pushOutput("server", "error", "UniTest", {}, arguments);
+        if (!this._task.options.quiet)
+          fcf.log.err.apply(fcf.log, fcf.append(["UniTest"], arguments));
+        this._task.selfOutput = false;
       }
 
 
 
-      _errEx(a_task) {
+      _errEx() {
         let args   = fcf.append([], arguments);
-        args.shift();
         let exdata = args.shift();
-        a_task.selfOutput = true;
-        a_task.pushOutput("server", "error", "UniTest", exdata, args);
-        if (!a_task.options.quiet)
+        this._task.selfOutput = true;
+        this._task.pushOutput("server", "error", "UniTest", exdata, args);
+        if (!this._task.options.quiet)
           fcf.log.log.apply(fcf.log, fcf.append(["UniTest"], args));
-        a_task.selfOutput = false;
+        this._task.selfOutput = false;
       }
 
 
