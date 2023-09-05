@@ -1071,7 +1071,7 @@ fcf.module({
             return true;
           return itm.function && itm.function.indexOf("Namespace.Unitest.") != 0 &&
                  itm.file.indexOf("fcf-framework-unitest/unitest.js") == -1 &&
-                 !(itm.function == "Exception" && itm.file.indexOf("/fcf.js") != -1)
+                 !(itm.function.indexOf("Exception") != -1 && itm.file.indexOf("/fcf.js") != -1)
                  ;
         });
         return {
