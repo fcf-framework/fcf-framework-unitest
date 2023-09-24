@@ -23,6 +23,15 @@ fcf.module({
     fcf.addException("UNITEST_FAILD_SEND_MESSAGE", "Failed to send message to test server \"@{{url}}@\"");
     fcf.addException("UNITEST_TIMEOUT", "Test timed out");
 
+    function toString(a_value){
+      return typeof a_value == "number" && isNaN(a_value) ? "NaN" :
+             a_value === undefined                        ? "undefined" :
+             a_value === false                            ? "false" :
+             a_value === true                             ? "true" :
+             a_value === null                             ? "null" :
+                                                            fcf.str(a_value);
+    }
+
     /// @class fcf.NUnitest.Unitest
     /// @brief The class that performs the testing is available through the singleton fcf.NUnitest.unitest
     Namespace["Unitest"] = class {
@@ -198,40 +207,40 @@ fcf.module({
         let c = fcf.compare(a_left, a_right, a_strict);
         if (a_operation == "!=") {
           if (c == 0) {
-            this._task.currentTestInfo.error = new fcf.Exception("UNITEST_NOT_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            this._task.currentTestInfo.error = new fcf.Exception("UNITEST_NOT_EQUAL", {left: toString(a_left), right: toString(a_right)});
             throw this._task.currentTestInfo.error;
           }
         } else if (a_operation == "=" || a_operation == "==") {
           if (c != 0) {
-            let error = new fcf.Exception("UNITEST_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_EQUAL", {left: toString(a_left), right: toString(a_right)});
             if (this._task && this._task.currentTestInfo)
               this._task.currentTestInfo.error = error
             throw error;
           }
         } else if (a_operation == "<") {
           if (c >= 0) {
-            let error = new fcf.Exception("UNITEST_LESS", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_LESS", {left: toString(a_left), right: toString(a_right)});
             if (this._task && this._task.currentTestInfo)
               this._task.currentTestInfo.error = error
             throw error;
           }
         } else if (a_operation == "<=") {
           if (c > 0) {
-            let error = new fcf.Exception("UNITEST_LESS_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_LESS_EQUAL", {left: toString(a_left), right: toString(a_right)});
             if (this._task && this._task.currentTestInfo)
               this._task.currentTestInfo.error = error
             throw error;
           }
         } else if (a_operation == ">") {
           if (c <= 0) {
-            let error = new fcf.Exception("UNITEST_GREATER", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_GREATER", {left: toString(a_left), right: toString(a_right)});
             if (this._task && this._task.currentTestInfo)
               this._task.currentTestInfo.error = error
             throw error;
           }
         } else if (a_operation == ">=") {
           if (c < 0) {
-            let error = new fcf.Exception("UNITEST_GREATER_EQUAL", {left: fcf.str(a_left), right: fcf.str(a_right)});
+            let error = new fcf.Exception("UNITEST_GREATER_EQUAL", {left: toString(a_left), right: toString(a_right)});
             if (this._task && this._task.currentTestInfo)
               this._task.currentTestInfo.error = error
             throw error;
