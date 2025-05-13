@@ -5,6 +5,6 @@ Has the ability to run tests on the browser side from a NODEJS script
 
 ## Description pages
 
-https://fcf-framework.tech/packages/fcf-framework-unitest/classes/fcf.NUnitest.Unitest - Description of the main unitest class
+https://fcf-framework.is-a-fullstack.dev/packages/fcf-framework-unitest/classes/fcf.NUnitest.Unitest - Description of the main unitest class
 
-https://fcf-framework.tech/packages/fcf-framework-unitest/pages/example - An example of testing on the browser side and on the server side
+https://fcf-framework.is-a-fullstack.dev/packages/fcf-framework-unitest/pages/example - An example of testing on the browser side and on the server side
